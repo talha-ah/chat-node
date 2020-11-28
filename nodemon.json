@@ -1,0 +1,6 @@
+{
+  "env": {
+    "MONGO_CONNECTION_STRING": "mongodb+srv://betarid:xtHucKuf9wzRJ6An@node-5ioaz.mongodb.net/messenger?retryWrites=true&w=majority",
+    "MY_SECRET_KEY": "verykeysecurehereused"
+  }
+}
