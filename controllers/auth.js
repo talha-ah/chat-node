@@ -11,21 +11,14 @@ const User = require("../models/user");
 exports.register = async (req, res, next) => {
   const firstName = req.body.firstName;
   const lastName = req.body.lastName;
-  const userName = req.body.userName;
-  const password = req.body.password;
   const email = req.body.email;
+  const dob = req.body.dob;
+  const password = req.body.password;
 
   try {
-    const userCheck = await User.findOne({ email: email });
+    const userCheck = await User.findOne({ email });
     if (userCheck) {
       const err = new Error("User already exists with that email!");
-      err.status = 404;
-      throw err;
-    }
-
-    const userCheck2 = await User.findOne({ userName });
-    if (userCheck2) {
-      const err = new Error("Username is not available!");
       err.status = 404;
       throw err;
     }
@@ -34,35 +27,33 @@ exports.register = async (req, res, next) => {
     const user = new User({
       firstName: firstName,
       lastName: lastName,
-      userName: userName,
+      dob: dob,
       password: hashedPassword,
       email: email,
     });
     const userSaved = await user.save();
 
-    res.status(200).json({ user: userSaved });
+    res.status(200).json({ registered: true, user: userSaved });
   } catch (err) {
     next(err);
   }
 };
 
 exports.login = async (req, res, next) => {
-  const authString = req.body.authString;
+  const email = req.body.email;
   const password = req.body.password;
 
   try {
-    const user = await User.findOne({
-      $or: [{ userName: authString }, { email: authString }],
-    });
+    const user = await User.findOne({ email });
     if (!user) {
-      const err = new Error("No user found with that email or username.");
+      const err = new Error("No user found with that email!");
       err.status = 404;
       throw err;
     }
 
     const checkPassword = bcrypt.compareSync(password, user.password);
     if (!checkPassword) {
-      const err = new Error("Incorrect password.");
+      const err = new Error("No user found with that combination!");
       err.status = 402;
       throw err;
     }
@@ -84,7 +75,7 @@ exports.forgetPassword = async (req, res, next) => {
   const email = req.body.email;
 
   try {
-    const user = await User.findOne({ email: email });
+    const user = await User.findOne({ email });
 
     if (!user) {
       var error = new Error("No user found with this email!");

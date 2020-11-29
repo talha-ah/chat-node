@@ -9,6 +9,8 @@ const bodyParser = require("body-parser");
 
 // Routes Imports
 const authRoutes = require("./routes/auth");
+const userRoutes = require("./routes/user");
+const messengerRoutes = require("./routes/messenger");
 
 // App initialization
 const app = express();
@@ -45,6 +47,8 @@ app.use("/data", express.static(path.join(__dirname, "data")));
 
 // Routes
 app.use("/auth", authRoutes);
+app.use("/user", userRoutes);
+app.use("/messenger", messengerRoutes);
 
 // Error Handler
 app.use((error, req, res, next) => {
@@ -71,7 +75,12 @@ mongoose
     );
     const io = require("./socket/socket").init(server);
     io.on("connection", (socket) => {
-      console.log("a user connected");
+      console.log("A User Connected");
+      socket.emit("toClient", { message: "fromClient" });
+
+      socket.on("toServer", (data) => {
+        console.log("toServer", { data });
+      });
       socket.on("disconnect", () => {
         console.log("user disconnected");
       });
