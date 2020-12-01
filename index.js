@@ -73,16 +73,20 @@ mongoose
     const server = app.listen(PORT, () =>
       console.log(`App listening at ${PORT}`)
     );
-    const io = require("./socket/socket").init(server);
+    const IOImport = require("./socket/socket");
+    const io = IOImport.init(server);
     io.on("connection", (socket) => {
-      console.log("A User Connected");
-      socket.emit("toClient", { message: "fromClient" });
+      console.log(
+        "Connection Established, Total = ",
+        IOImport.addUser(socket).length
+      );
+      IOImport.getUsers().map((user) => console.log(user.userId, user.id));
 
-      socket.on("toServer", (data) => {
-        console.log("toServer", { data });
-      });
       socket.on("disconnect", () => {
-        console.log("user disconnected");
+        console.log(
+          "Connection Demolished, Total = ",
+          IOImport.deleteUser(socket).length
+        );
       });
     });
   })
