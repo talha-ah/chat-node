@@ -10,4 +10,6 @@ router.get("/chat/:chatId", isAuth, messengerController.getChat);
 router.post("/chats", isAuth, messengerController.createChat);
 router.post("/chat/:chatId", isAuth, messengerController.createMessage);
 
+router.delete("/chat/:chatId", isAuth, messengerController.deleteChat);
+
 module.exports = router;

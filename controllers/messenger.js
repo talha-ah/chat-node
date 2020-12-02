@@ -78,6 +78,32 @@ exports.getChat = async (req, res, next) => {
     next(err);
   }
 };
+exports.deleteChat = async (req, res, next) => {
+  try {
+    const userId = req.userId;
+    const chatId = req.params.chatId;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      const err = new Error("There was an error!");
+      err.status = 400;
+      throw err;
+    }
+    const chatDeleted = await Chat.findOneAndDelete({
+      _id: chatId,
+      $or: [{ user: userId }, { with: userId }],
+    });
+    if (!chatDeleted) {
+      const err = new Error("There was an error!");
+      err.status = 404;
+      throw err;
+    }
+
+    res.status(200).json({ chat: chatDeleted });
+  } catch (err) {
+    next(err);
+  }
+};
 
 exports.createChat = async (req, res, next) => {
   try {
@@ -108,6 +134,13 @@ exports.createChat = async (req, res, next) => {
         with: withId,
       });
       const chatCreated = await chat.save();
+      const socketUser = IOInstance.getUserById(withId);
+      if (socketUser) {
+        socketUser.socket.emit("chat", {
+          action: "create",
+          chat: chatCreated,
+        });
+      }
 
       res.status(200).json({ created: true, chat: chatCreated });
     }
