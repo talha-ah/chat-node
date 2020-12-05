@@ -6,6 +6,7 @@ const helmet = require("helmet"); // headers
 const express = require("express");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
+const Colors = require("./utils/Colors");
 
 // Routes Imports
 const authRoutes = require("./routes/auth");
@@ -52,7 +53,7 @@ app.use("/messenger", messengerRoutes);
 
 // Error Handler
 app.use((error, req, res, next) => {
-  console.log(error);
+  console.log(Colors.FgRed, error);
   const message = error.message;
   const status = error.status || 500;
   res.status(status).json({ message: message, error: error });
@@ -70,20 +71,21 @@ mongoose
     useCreateIndex: true,
   })
   .then((result) => {
-    const server = app.listen(PORT, () =>
-      console.log(`App listening at ${PORT}`)
-    );
+    const server = app.listen(PORT, () => {
+      console.log(Colors.Reset, Colors.FgMagenta, `App listening at ${PORT}`);
+    });
     const IOImport = require("./socket/socket");
     const io = IOImport.init(server);
     io.on("connection", (socket) => {
       console.log(
+        Colors.FgMagenta,
         "Connection Established, Total = ",
         IOImport.addUser(socket).length
       );
-      IOImport.getUsers().map((user) => console.log(user.userId, user.id));
 
       socket.on("disconnect", () => {
         console.log(
+          Colors.FgRed,
           "Connection Demolished, Total = ",
           IOImport.deleteUser(socket).length
         );
