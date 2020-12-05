@@ -19,6 +19,7 @@ exports.getChats = async (req, res, next) => {
     const chats = await Chat.find({
       $or: [{ user: userId }, { with: userId }],
     })
+      .select("-messages")
       .populate("user")
       .populate("with")
       .exec();
@@ -53,7 +54,7 @@ exports.getChat = async (req, res, next) => {
       { _id: chatId },
       {
         messages: {
-          $slice: [-10 * page, 10],
+          $slice: [-20 * page, 20],
         },
       }
     )
