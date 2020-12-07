@@ -29,7 +29,7 @@ exports.getChats = async (req, res, next) => {
       throw err;
     }
 
-    res.status(200).json({ chats });
+    res.status(200).json({ success: true, chats });
   } catch (err) {
     next(err);
   }
@@ -70,12 +70,90 @@ exports.getChat = async (req, res, next) => {
     }
 
     res.status(200).json({
+      success: true,
       chat: {
         ...chat.toObject(),
         total_messages: chatLength[0].total_messages,
       },
     });
   } catch (err) {
+    next(err);
+  }
+};
+exports.createChat = async (req, res, next) => {
+  try {
+    const userId = req.userId;
+    const withId = req.body.withId;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      const err = new Error("There was an error!");
+      err.status = 404;
+      throw err;
+    }
+    const user2 = await User.findById(withId);
+    if (!user2) {
+      const err = new Error("There was an error!");
+      err.status = 404;
+      throw err;
+    }
+    const chatCheck = await Chat.findOne(
+      { user: userId, with: withId },
+      {
+        messages: {
+          $slice: [-20 * page, 20],
+        },
+      }
+    )
+      .populate("user")
+      .populate("with")
+      .populate("messages")
+      .exec();
+    if (chatCheck) {
+      const chatLength = await Chat.aggregate([
+        { $match: { _id: mongoose.Types.ObjectId(chatCheck._id) } },
+        {
+          $project: {
+            total_messages: {
+              $size: "$messages",
+            },
+          },
+        },
+      ]);
+      res.status(200).json({
+        success: true,
+        found: true,
+        chat: {
+          ...chatCheck.toObject(),
+          total_messages: chatLength[0].total_messages,
+        },
+      });
+    } else {
+      const chat = new Chat({
+        user: userId,
+        with: withId,
+      });
+      const chatCreated = await chat.save();
+      let chatObject = {
+        ...chatCreated.toObject(),
+        user,
+        with: user2,
+        total_messages: 0,
+      };
+      const socketUser = IOInstance.getUserById(withId);
+      if (socketUser) {
+        socketUser.socket.emit("chat", {
+          action: "create",
+          chat: chatObject,
+        });
+      }
+
+      res.status(200).json({ success: true, found: false, chat: chatObject });
+    }
+  } catch (err) {
+    if (!err.status) {
+      err.status = 500;
+    }
     next(err);
   }
 };
@@ -100,55 +178,21 @@ exports.deleteChat = async (req, res, next) => {
       throw err;
     }
 
-    res.status(200).json({ chat: chatDeleted });
-  } catch (err) {
-    next(err);
-  }
-};
+    let receiverId =
+      String(chatDeleted.user) === String(userId)
+        ? chatDeleted.with
+        : chatDeleted.user;
 
-exports.createChat = async (req, res, next) => {
-  try {
-    const userId = req.userId;
-    const withId = req.body.withId;
-
-    const user = await User.findById(userId);
-    if (!user) {
-      const err = new Error("There was an error!");
-      err.status = 404;
-      throw err;
-    }
-    const user2 = await User.findById(withId);
-    if (!user2) {
-      const err = new Error("There was an error!");
-      err.status = 404;
-      throw err;
-    }
-    const chatCheck = await Chat.findOne({
-      user: userId,
-      with: withId,
-    });
-    if (chatCheck) {
-      res.status(200).json({ found: true, chat: chatCheck });
-    } else {
-      const chat = new Chat({
-        user: userId,
-        with: withId,
+    const socketUser = IOInstance.getUserById(receiverId);
+    if (socketUser) {
+      socketUser.socket.emit("chat", {
+        action: "delete",
+        chat: chatDeleted,
       });
-      const chatCreated = await chat.save();
-      const socketUser = IOInstance.getUserById(withId);
-      if (socketUser) {
-        socketUser.socket.emit("chat", {
-          action: "create",
-          chat: chatCreated,
-        });
-      }
+    }
 
-      res.status(200).json({ created: true, chat: chatCreated });
-    }
+    res.status(200).json({ success: true, chat: chatDeleted });
   } catch (err) {
-    if (!err.status) {
-      err.status = 500;
-    }
     next(err);
   }
 };
@@ -189,7 +233,7 @@ exports.createMessage = async (req, res, next) => {
       });
     }
 
-    res.status(200).json({ created: true, message: messageCreated });
+    res.status(200).json({ success: true, message: messageCreated });
   } catch (err) {
     if (!err.status) {
       err.status = 500;
